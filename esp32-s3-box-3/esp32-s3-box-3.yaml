@@ -41,16 +41,29 @@ esphome:
   platformio_options:
     board_build.flash_mode: dio
   on_boot:
-    priority: 600
-    then:
-      - script.execute: draw_display
-      - delay: 30s
-      - if:
-          condition:
-            lambda: return id(init_in_progress);
-          then:
-            - lambda: id(init_in_progress) = false;
-            - script.execute: draw_display
+    - priority: 200
+      then:
+        - at581x.settings:
+            id: "Waveradar"
+            hw_frontend_reset: false
+            frequency: 5800Mhz
+            sensing_distance: 200 # 0-1023
+            poweron_selfcheck_time: 2s
+            protect_time: 1s
+            trigger_base: 500ms
+            trigger_keep: 30s
+            stage_gain: 3 # 0-12 the higher the value the smaller the gain
+            power_consumption: 70uA
+    - priority: 600
+      then:
+        - script.execute: draw_display
+        - delay: 30s
+        - if:
+            condition:
+              lambda: return id(init_in_progress);
+            then:
+              - lambda: id(init_in_progress) = false;
+              - script.execute: draw_display
 
 esp32:
   board: esp32s3box
@@ -126,6 +139,16 @@ binary_sensor:
         then:
           - button.press: factory_reset_btn
 
+  - platform: gpio
+    pin: GPIO21
+    name: "Radar motion"
+    on_press:
+      then:
+        - light.turn_on: led
+    on_release:
+      then:
+        - light.turn_off: led
+
 output:
   - platform: ledc
     pin: GPIO47
@@ -156,6 +179,11 @@ micro_wake_word:
   models:
     - ${micro_wake_word_model}
   on_wake_word_detected:
+    - lambda: id(box_speaker).play(id(awake_wave_file), sizeof(id(awake_wave_file)));
+    - delay: 1s
+    - wait_until:
+        not:
+          speaker.is_playing:
     - voice_assistant.start:
         wake_word: !lambda return wake_word;
 
@@ -169,6 +197,7 @@ voice_assistant:
   vad_threshold: 3
   on_listening:
     - lambda: id(voice_assistant_phase) = ${voice_assist_listening_phase_id};
+    - light.turn_on: led
     - text_sensor.template.publish:
         id: text_request
         state: "..."
@@ -191,6 +220,11 @@ voice_assistant:
   on_tts_stream_start:
     - lambda: id(voice_assistant_phase) = ${voice_assist_replying_phase_id};
     - script.execute: draw_display
+    - lambda: id(box_speaker).play(id(done_wave_file), sizeof(id(done_wave_file)));
+    - delay: 1s
+    - wait_until:
+        not:
+          speaker.is_playing:
   on_tts_stream_end:
     - if:
         condition:
@@ -219,7 +253,11 @@ voice_assistant:
         then:
           - lambda: id(voice_assistant_phase) = ${voice_assist_error_phase_id};
           - script.execute: draw_display
+          - lambda: id(box_speaker).play(id(error_sound), sizeof(id(error_sound)));
           - delay: 1s
+          - wait_until:
+              not:
+                speaker.is_playing:
           - if:
               condition:
                 switch.is_off: mute
@@ -503,6 +541,10 @@ switch:
       - delay: 15min
       - switch.turn_off: timer_ringing
 
+  - platform: at581x
+    at581x_id: "Waveradar"
+    name: "Enable Radar"
+
 select:
   - platform: template
     entity_category: config
@@ -679,6 +721,12 @@ color:
 file:
   - id: timer_finished_wave_file
     file: https://github.com/esphome/wake-word-voice-assistants/raw/main/sounds/timer_finished.wav
+  - id: awake_wave_file
+    file: sounds/awake.wav
+  - id: done_wave_file
+    file: sounds/done.wav
+  - id: error_sound
+    file: sounds/error.wav
 
 spi:
   - id: spi_bus
@@ -752,3 +800,40 @@ display:
           it.fill(Color::BLACK);
           id(draw_timer_timeline).execute();
           id(draw_active_timer_widget).execute();
+
+at581x:
+  id: "Waveradar"
+  i2c_id: bus_a
+
+touchscreen:
+  platform: gt911
+  i2c_id: bus_0
+  id: gt911_touchscreen
+  interrupt_pin: GPIO3
+  on_touch:
+    - then:
+      - light.turn_on: led
+      - delay: 60s
+      - light.turn_off: led
+
+i2c:
+  - id: bus_0
+    sda: GPIO8
+    scl: GPIO18
+    scan: false
+  - id: bus_a
+    sda: GPIO41
+    scl: GPIO40
+    scan: false
+
+sensor:
+  - platform: aht10
+    variant: AHT20  # Also for AHT30
+    i2c_id: bus_a
+    id: aht_20
+    address: 0x38  # Needed?
+    temperature:
+      name: "Temperature"
+    humidity:
+      name: "Humidity"
+    update_interval: 60s
