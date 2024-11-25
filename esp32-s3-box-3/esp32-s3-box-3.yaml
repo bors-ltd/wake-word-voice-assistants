@@ -451,6 +451,17 @@ script:
             }
             id(s3_box_lcd).printf(120, 47, id(font_timer), Color::BLACK, "%s", display_string.c_str());
           }
+  - id: draw_temperature_humidity
+    then:
+      - lambda: |
+          if (id(ha_temperature).has_state()){
+            id(s3_box_lcd).filled_circle(65, 190, 35, id(scarlet_red));
+            id(s3_box_lcd).printf(40, 172, id(font_timer), Color::WHITE, "%2.1f", id(ha_temperature).state);
+          }
+          if (id(ha_humidity).has_state()){
+            id(s3_box_lcd).filled_circle(255, 190, 35, id(sky_blue));
+            id(s3_box_lcd).printf(226, 172, id(font_timer), Color::WHITE, "%2.0f%%", id(ha_humidity).state);
+          }
 
   - id: start_voice_assistant
     then:
@@ -718,6 +729,11 @@ color:
     hex: "26ed3a"
   - id: paused_timer_color
     hex: "3b89e3"
+  # Tango Palette
+  - id: scarlet_red
+    hex: EF2929
+  - id: sky_blue
+    hex: 729FCF
 
 file:
   - id: timer_finished_wave_file
@@ -753,6 +769,7 @@ display:
           it.image((it.get_width() / 2), (it.get_height() / 2), id(casita_idle), ImageAlign::CENTER);
           id(draw_timer_timeline).execute();
           id(draw_active_timer_widget).execute();
+          id(draw_temperature_humidity).execute();
       - id: listening_page
         lambda: |-
           it.fill(id(listening_color));
@@ -801,6 +818,7 @@ display:
           it.fill(Color::BLACK);
           id(draw_timer_timeline).execute();
           id(draw_active_timer_widget).execute();
+          id(draw_temperature_humidity).execute();
 
 #at581x:
 #  id: "Waveradar"
@@ -832,9 +850,17 @@ sensor:
     variant: AHT20  # Also for AHT30
     i2c_id: bus_a
     id: aht_20
-    address: 0x38  # Needed?
+    #address: 0x38  # Needed?
     temperature:
       name: "Temperature"
     humidity:
       name: "Humidity"
     update_interval: 60s
+  - platform: homeassistant
+    id: ha_temperature
+    entity_id: ${temperature_sensor}
+    internal: true
+  - platform: homeassistant
+    id: ha_humidity
+    entity_id: ${humidity_sensor}
+    internal: true
