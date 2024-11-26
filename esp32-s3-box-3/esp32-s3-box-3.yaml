@@ -446,8 +446,8 @@ script:
       - lambda: |
           id(check_if_timers_active).execute();
           if (id(global_is_timer_active)){
-            id(s3_box_lcd).filled_rectangle(80 , 40 , 160 , 50 , Color::WHITE );
-            id(s3_box_lcd).rectangle(80 , 40 , 160 , 50 , Color::BLACK );
+            id(s3_box_lcd).filled_rectangle(80 , 50 , 160 , 50 , Color::WHITE );
+            id(s3_box_lcd).rectangle(80 , 50 , 160 , 50 , Color::BLACK );
 
             id(fetch_first_active_timer).execute();
             int hours_left = floor(id(global_first_active_timer).seconds_left / 3600);
@@ -463,7 +463,13 @@ script:
             } else {
               display_string = display_minute + ":" + display_seconds;
             }
-            id(s3_box_lcd).printf(120, 47, id(font_timer), Color::BLACK, "%s", display_string.c_str());
+            id(s3_box_lcd).printf(120, 57, id(font_timer), Color::BLACK, "%s", display_string.c_str());
+
+            if (id(global_first_active_timer).name.c_str()) {
+              id(s3_box_lcd).filled_rectangle(20 , 20 , 280 , 30 , Color::WHITE );
+              id(s3_box_lcd).rectangle(20 , 20 , 280 , 30 , Color::BLACK );
+              id(s3_box_lcd).printf(30, 25, id(font_request), Color::BLACK, "%s", id(global_first_active_timer).name.c_str());
+            }
           }
   - id: draw_temperature_humidity
     then:
@@ -692,18 +698,24 @@ font:
       italic: true
     id: font_request
     size: 15
+    glyphsets:
+      - GF_Latin_Core
   - file:
       type: gfonts
       family: Figtree
       weight: 300
     id: font_response
     size: 15
+    glyphsets:
+      - GF_Latin_Core
   - file:
       type: gfonts
       family: Figtree
       weight: 300
     id: font_timer
     size: 30
+    glyphsets:
+      - GF_Latin_Core
 
 text_sensor:
   - id: text_request
@@ -813,6 +825,11 @@ display:
         lambda: |-
           it.fill(id(idle_color));
           it.image((it.get_width() / 2), (it.get_height() / 2), id(casita_timer_finished), ImageAlign::CENTER);
+          if (id(global_first_active_timer).name.c_str()) {
+            it.filled_rectangle(20 , 190 , 280 , 30 , Color::WHITE );
+            it.rectangle(20 , 190 , 280 , 30 , Color::BLACK );
+            it.printf(30, 195, id(font_response), Color::BLACK, "%s", id(global_first_active_timer).name.c_str());
+          }
       - id: error_page
         lambda: |-
           it.fill(id(error_color));
