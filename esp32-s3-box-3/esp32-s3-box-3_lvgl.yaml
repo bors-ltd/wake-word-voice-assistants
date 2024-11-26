@@ -1,0 +1,984 @@
+---
+substitutions:
+  name: esp32-s3-box-3
+  friendly_name: ESP32 S3 Box 3
+  loading_illustration_file: https://github.com/esphome/wake-word-voice-assistants/raw/main/casita/loading_320_240.png
+  idle_illustration_file: https://github.com/esphome/wake-word-voice-assistants/raw/main/casita/idle_320_240.png
+  listening_illustration_file: https://github.com/esphome/wake-word-voice-assistants/raw/main/casita/listening_320_240.png
+  thinking_illustration_file: https://github.com/esphome/wake-word-voice-assistants/raw/main/casita/thinking_320_240.png
+  replying_illustration_file: https://github.com/esphome/wake-word-voice-assistants/raw/main/casita/replying_320_240.png
+  error_illustration_file: https://github.com/esphome/wake-word-voice-assistants/raw/main/casita/error_320_240.png
+  timer_finished_illustration_file: https://github.com/esphome/wake-word-voice-assistants/raw/main/casita/timer_finished_320_240.png
+
+  loading_illustration_background_color: "000000"
+  idle_illustration_background_color: "000000"
+  listening_illustration_background_color: "FFFFFF"
+  thinking_illustration_background_color: "FFFFFF"
+  replying_illustration_background_color: "FFFFFF"
+  error_illustration_background_color: "000000"
+
+  voice_assist_idle_phase_id: "1"
+  voice_assist_listening_phase_id: "2"
+  voice_assist_thinking_phase_id: "3"
+  voice_assist_replying_phase_id: "4"
+  voice_assist_not_ready_phase_id: "10"
+  voice_assist_error_phase_id: "11"
+  voice_assist_muted_phase_id: "12"
+  voice_assist_timer_finished_phase_id: "20"
+
+  # These unique characters have been extracted from every test file of every language available on https://github.com/home-assistant/intents (14 March 2024)
+  # However, the Figtree font only contains Latin characters, so there is no point using this.
+
+  allowed_characters: " !#%'()+,-./0123456789:;<>?@ABCDEFGHIJKLMNOPQRSTUVWYZ[]_abcdefghijklmnopqrstuvwxyz{|}°²³µ¿ÁÂÄÅÉÖÚßàáâãäåæçèéêëìíîðñòóôõöøùúûüýþāăąćčďĐđēėęěğĮįıļľŁłńňőřśšťũūůűųźŻżŽžơưșțΆΈΌΐΑΒΓΔΕΖΗΘΚΜΝΠΡΣΤΥΦάέήίαβγδεζηθικλμνξοπρςστυφχψωϊόύώАБВГДЕЖЗИКЛМНОПРСТУХЦЧШЪЭЮЯабвгдежзийклмнопрстуфхцчшщъыьэюяёђєіїјљњћאבגדהוזחטיכלםמןנסעפץצקרשת،ءآأإئابةتجحخدذرزسشصضطظعغفقكلمنهوىيٹپچڈکگںھہیےংকচতধনফবযরলশষস়ািু্చయలిెొ్ംഅആഇഈഉഎഓകഗങചജഞടഡണതദധനപഫബഭമയരറലളവശസഹാിീുൂെേൈ്ൺൻർൽൾაბგდევზთილმნოპრსტუფქყშჩცძჭხạảấầẩậắặẹẽếềểệỉịọỏốồổỗộớờởợụủứừửữựỳ—、一上不个中为主乾了些亮人任低佔何作供依侧係個側偵充光入全关冇冷几切到制前動區卧厅厨及口另右吊后吗启吸呀咗哪唔問啟嗎嘅嘛器圍在场執場外多大始安定客室家密寵对將小少左已帘常幫幾库度庫廊廚廳开式後恆感態成我戲戶户房所扇手打执把拔换掉控插摄整斯新明是景暗更最會有未本模機檯櫃欄次正氏水沒没洗活派温測源溫漏潮激濕灯為無煙照熱燈燥物狀玄现現瓦用發的盞目着睡私空窗立笛管節簾籬紅線红罐置聚聲脚腦腳臥色节著行衣解設調請謝警设调走路車车运連遊運過道邊部都量鎖锁門閂閉開關门闭除隱離電震霧面音頂題顏颜風风食餅餵가간감갔강개거게겨결경고공과관그금급기길깥꺼껐꼽나난내네놀누는능니다닫담대더데도동됐되된됨둡드든등디때떤뜨라래러렇렌려로료른를리림링마많명몇모무문물뭐바밝방배변보부불블빨뽑사산상색서설성세센션소쇼수스습시신실싱아안않알았애야어얼업없었에여연열옆오온완외왼요운움워원위으은을음의이인일임입있작잠장재전절정제져조족종주줄중줘지직진짐쪽차창천최추출충치침커컴켜켰쿠크키탁탄태탬터텔통트튼티파팬퍼폰표퓨플핑한함해했행혀현화활후휴힘，？"
+
+  micro_wake_word_model: okay_nabu
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  min_version: 2024.9.0
+  name_add_mac_suffix: true
+  platformio_options:
+    board_build.flash_mode: dio
+  on_boot:
+    - delay: 5s
+    - lvgl.widget.hide: boot_screen
+
+esp32:
+  board: esp32s3box
+  flash_size: 16MB
+  framework:
+    type: esp-idf
+    sdkconfig_options:
+      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_240: "y"
+      CONFIG_ESP32S3_DATA_CACHE_64KB: "y"
+      CONFIG_ESP32S3_DATA_CACHE_LINE_64B: "y"
+      CONFIG_AUDIO_BOARD_CUSTOM: "y"
+      CONFIG_ESP32_S3_BOX_3_BOARD: "y"
+    components:
+      - name: esp32_s3_box_3_board
+        source: github://jesserockz/esp32-s3-box-3-board@main
+        refresh: 0s
+
+psram:
+  mode: octal
+  speed: 80MHz
+
+external_components:
+  - source: github://pr#5230
+    components: esp_adf
+    refresh: 0s
+  - source: github://jesserockz/esphome-components
+    components: [file]
+    refresh: 0s
+
+api:
+  on_client_connected:
+    - if:
+        condition:
+          lambda: 'return (0 == client_info.find("Home Assistant "));'
+        then:
+          - lvgl.widget.show: lbl_hastatus
+  on_client_disconnected:
+    - if:
+        condition:
+          lambda: 'return (0 == client_info.find("Home Assistant "));'
+        then:
+          - lvgl.widget.hide: lbl_hastatus
+
+ota:
+  - platform: esphome
+    id: ota_esphome
+
+logger:
+  hardware_uart: USB_SERIAL_JTAG
+
+wifi:
+  ap:
+  on_connect:
+    - lvgl.page.show:
+        id: main_page
+  on_disconnect:
+    - lvgl.page.show:
+        id: main_page
+
+captive_portal:
+
+button:
+  - platform: factory_reset
+    id: factory_reset_btn
+    internal: true
+
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO0
+      mode: INPUT_PULLUP
+      inverted: true
+    id: top_left_button
+    internal: true
+    on_multi_click:
+      - timing:
+          - ON for at least 50ms
+          - OFF for at least 50ms
+        then:
+          switch.turn_off: timer_ringing
+      - timing:
+          - ON for at least 10s
+        then:
+          - button.press: factory_reset_btn
+
+number:
+  - platform: template
+    name: LVGL Screen timeout
+    optimistic: true
+    id: display_timeout
+    unit_of_measurement: "s"
+    initial_value: 45
+    restore_value: true
+    min_value: 10
+    max_value: 180
+    step: 5
+    mode: box
+
+output:
+  - platform: ledc
+    pin: GPIO47
+    id: backlight_output
+
+light:
+  - platform: monochromatic
+    id: display_backlight
+    name: Screen
+    icon: "mdi:television"
+    entity_category: config
+    output: backlight_output
+    restore_mode: RESTORE_DEFAULT_ON
+    default_transition_length: 50ms
+
+esp_adf:
+  board: esp32s3box3
+
+microphone:
+  - platform: esp_adf
+    id: box_mic
+
+speaker:
+  - platform: esp_adf
+    id: box_speaker
+
+micro_wake_word:
+  models:
+    - ${micro_wake_word_model}
+  on_wake_word_detected:
+    - lambda: id(box_speaker).play(id(awake_wave_file), sizeof(id(awake_wave_file)));
+    - script.execute: lvgl_resume
+    - wait_until:
+        not:
+          speaker.is_playing:
+    - voice_assistant.start:
+        wake_word: !lambda return wake_word;
+
+voice_assistant:
+  id: va
+  microphone: box_mic
+  speaker: box_speaker
+  noise_suppression_level: 2
+  auto_gain: 31dBFS
+  volume_multiplier: 2.0
+  vad_threshold: 3
+  on_listening:
+    - lambda: id(voice_assistant_phase) = ${voice_assist_listening_phase_id};
+    - script.execute: lvgl_resume
+    - text_sensor.template.publish:
+        id: text_request
+        state: "..."
+    - text_sensor.template.publish:
+        id: text_response
+        state: "..."
+    - lvgl.page.show:
+        id: va_page
+  on_stt_vad_end:
+    - lambda: id(voice_assistant_phase) = ${voice_assist_thinking_phase_id};
+    - lvgl.page.show:
+        id: va_page
+  on_stt_end:
+    - text_sensor.template.publish:
+        id: text_request
+        state: !lambda return x;
+    - lvgl.page.show:
+        id: va_page
+  on_tts_start:
+    - text_sensor.template.publish:
+        id: text_response
+        state: !lambda return x;
+  on_tts_stream_start:
+    - lambda: id(voice_assistant_phase) = ${voice_assist_replying_phase_id};
+    - lambda: id(box_speaker).play(id(done_wave_file), sizeof(id(done_wave_file)));
+    - lvgl.page.show:
+        id: va_page
+    - wait_until:
+        not:
+          speaker.is_playing:
+  on_tts_stream_end:
+    - if:
+        condition:
+          switch.is_off: mute
+        then:
+          - lambda: id(voice_assistant_phase) = ${voice_assist_idle_phase_id};
+        else:
+          - lambda: id(voice_assistant_phase) = ${voice_assist_muted_phase_id};
+    - lvgl.page.show:
+        id: main_page
+  on_end:
+    - wait_until:
+        not:
+          voice_assistant.is_running:
+    - if:
+        condition:
+          and:
+            - switch.is_off: mute
+            - lambda: return id(wake_word_engine_location).state == "On device";
+            - lambda: return id(voice_assistant_phase) != ${voice_assist_timer_finished_phase_id};
+        then:
+          - micro_wake_word.start:
+    - lambda: id(check_if_timers_active).execute();
+  on_error:
+    - if:
+        condition:
+          lambda: return !id(init_in_progress);
+        then:
+          - lambda: id(voice_assistant_phase) = ${voice_assist_error_phase_id};
+          - lambda: id(box_speaker).play(id(error_sound), sizeof(id(error_sound)));
+          - lvgl.page.show:
+              id: va_page
+          - wait_until:
+              not:
+                speaker.is_playing:
+          - if:
+              condition:
+                switch.is_off: mute
+              then:
+                - lambda: id(voice_assistant_phase) = ${voice_assist_idle_phase_id};
+              else:
+                - lambda: id(voice_assistant_phase) = ${voice_assist_muted_phase_id};
+          - lvgl.page.show:
+              id: main_page
+  on_client_connected:
+    - lambda: id(init_in_progress) = false;
+    - script.execute: start_voice_assistant
+    - lvgl.page.show:
+        id: main_page
+  on_client_disconnected:
+    - script.execute: stop_voice_assistant
+    - lvgl.page.show:
+        id: main_page
+  on_timer_started:
+    - lvgl.page.show:
+        id: va_page
+  on_timer_cancelled:
+    - lvgl.page.show:
+        id: va_page
+  on_timer_updated:
+    - lvgl.page.show:
+        id: va_page
+  on_timer_tick:
+    - lvgl.page.show:
+        id: va_page
+  on_timer_finished:
+    - script.execute: stop_voice_assistant
+    - lambda: id(voice_assistant_phase) = ${voice_assist_timer_finished_phase_id};
+    - script.execute: lvgl_resume
+    - switch.turn_on: timer_ringing
+    - lvgl.page.show:
+        id: va_page
+    - wait_until:
+        not:
+          microphone.is_capturing:
+    - while:
+        condition:
+          switch.is_on: timer_ringing
+        then:
+          - lambda: id(box_speaker).play(id(timer_finished_wave_file), sizeof(id(timer_finished_wave_file)));
+          - delay: 1s
+    - wait_until:
+        not:
+          speaker.is_playing:
+    - switch.turn_off: timer_ringing
+    - script.execute: start_voice_assistant
+    - lvgl.page.show:
+        id: main_page
+
+script:
+  - id: fetch_first_active_timer
+    then:
+      - lambda: |
+          const auto timers = id(va).get_timers();
+          auto output_timer = timers.begin()->second;
+          for (auto &iterable_timer : timers) {
+            if (iterable_timer.second.is_active && iterable_timer.second.seconds_left <= output_timer.seconds_left) {
+              output_timer = iterable_timer.second;
+            }
+          }
+          id(global_first_active_timer) = output_timer;
+  - id: check_if_timers_active
+    then:
+      - lambda: |
+          const auto timers = id(va).get_timers();
+          bool output = false;
+          if (timers.size() > 0) {
+            for (auto &iterable_timer : timers) {
+              if(iterable_timer.second.is_active) {
+                output = true;
+              }
+            }
+          }
+          id(global_is_timer_active) = output;
+  - id: fetch_first_timer
+    then:
+      - lambda: |
+          const auto timers = id(va).get_timers();
+          auto output_timer = timers.begin()->second;
+          for (auto &iterable_timer : timers) {
+            if (iterable_timer.second.seconds_left <= output_timer.seconds_left) {
+              output_timer = iterable_timer.second;
+            }
+          }
+          id(global_first_timer) = output_timer;
+  - id: check_if_timers
+    then:
+      - lambda: |
+          const auto timers = id(va).get_timers();
+          bool output = false;
+          if (timers.size() > 0) {
+            output = true;
+          }
+          id(global_is_timer) = output;
+
+  - id: start_voice_assistant
+    then:
+      - if:
+          condition:
+            switch.is_off: mute
+          then:
+            - if:
+                condition:
+                  lambda: return id(wake_word_engine_location).state == "In Home Assistant";
+                then:
+                  - lambda: id(va).set_use_wake_word(true);
+                  - voice_assistant.start_continuous:
+            - if:
+                condition:
+                  lambda: return id(wake_word_engine_location).state == "On device";
+                then:
+                  - lambda: id(va).set_use_wake_word(false);
+                  - micro_wake_word.start
+            - lambda: id(voice_assistant_phase) = ${voice_assist_idle_phase_id};
+          else:
+            - lambda: id(voice_assistant_phase) = ${voice_assist_muted_phase_id};
+
+  - id: stop_voice_assistant
+    then:
+      - if:
+          condition:
+            lambda: return id(wake_word_engine_location).state == "In Home Assistant";
+          then:
+            - lambda: id(va).set_use_wake_word(false);
+            - voice_assistant.stop:
+      - if:
+          condition:
+            lambda: return id(wake_word_engine_location).state == "On device";
+          then:
+            - voice_assistant.stop:
+            - micro_wake_word.stop:
+      - lambda: id(voice_assistant_phase) = ${voice_assist_not_ready_phase_id};
+
+  - id: lvgl_resume
+    then:
+      - if:
+          condition: lvgl.is_paused
+          then:
+            - logger.log: "LVGL resuming"
+            - lvgl.resume:
+            - lvgl.widget.redraw:
+            - light.turn_on: display_backlight
+
+switch:
+  - platform: template
+    name: Mute
+    id: mute
+    icon: "mdi:microphone-off"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    entity_category: config
+    on_turn_off:
+      - if:
+          condition:
+            lambda: return !id(init_in_progress);
+          then:
+            - lambda: id(voice_assistant_phase) = ${voice_assist_idle_phase_id};
+            - if:
+                condition:
+                  not:
+                    - voice_assistant.is_running
+                then:
+                  - if:
+                      condition:
+                        lambda: return id(wake_word_engine_location).state == "In Home Assistant";
+                      then:
+                        - lambda: id(va).set_use_wake_word(true);
+                        - voice_assistant.start_continuous
+                  - if:
+                      condition:
+                        lambda: return id(wake_word_engine_location).state == "On device";
+                      then:
+                        - lambda: id(va).set_use_wake_word(false);
+                        - micro_wake_word.start
+    on_turn_on:
+      - if:
+          condition:
+            lambda: return !id(init_in_progress);
+          then:
+            - lambda: id(va).set_use_wake_word(false);
+            - voice_assistant.stop
+            - micro_wake_word.stop
+            - lambda: id(voice_assistant_phase) = ${voice_assist_muted_phase_id};
+
+  - platform: template
+    id: timer_ringing
+    optimistic: true
+    internal: true
+    restore_mode: ALWAYS_OFF
+    on_turn_on:
+      - delay: 15min
+      - switch.turn_off: timer_ringing
+
+select:
+  - platform: template
+    entity_category: config
+    name: Wake word engine location
+    id: wake_word_engine_location
+    icon: "mdi:account-voice"
+    optimistic: true
+    restore_value: true
+    options:
+      - In Home Assistant
+      - On device
+    initial_option: On device
+    on_value:
+      - if:
+          condition:
+            lambda: return !id(init_in_progress);
+          then:
+            - wait_until:
+                lambda: return id(voice_assistant_phase) == ${voice_assist_muted_phase_id} || id(voice_assistant_phase) == ${voice_assist_idle_phase_id};
+            - if:
+                condition:
+                  lambda: return x == "In Home Assistant";
+                then:
+                  - micro_wake_word.stop
+                  - delay: 500ms
+                  - if:
+                      condition:
+                        switch.is_off: mute
+                      then:
+                        - lambda: id(va).set_use_wake_word(true);
+                        - voice_assistant.start_continuous:
+            - if:
+                condition:
+                  lambda: return x == "On device";
+                then:
+                  - lambda: id(va).set_use_wake_word(false);
+                  - voice_assistant.stop
+                  - delay: 500ms
+                  - if:
+                      condition:
+                        switch.is_off: mute
+                      then:
+                        - micro_wake_word.start
+
+globals:
+  - id: init_in_progress
+    type: bool
+    restore_value: false
+    initial_value: "true"
+  - id: voice_assistant_phase
+    type: int
+    restore_value: false
+    initial_value: ${voice_assist_not_ready_phase_id}
+  - id: global_first_active_timer
+    type: voice_assistant::Timer
+    restore_value: false
+  - id: global_is_timer_active
+    type: bool
+    restore_value: false
+  - id: global_first_timer
+    type: voice_assistant::Timer
+    restore_value: false
+  - id: global_is_timer
+    type: bool
+    restore_value: false
+
+image:
+  - file: ${error_illustration_file}
+    id: casita_error
+    resize: 320x240
+    type: RGB565
+    use_transparency: true
+  - file: ${idle_illustration_file}
+    id: casita_idle
+    resize: 320x240
+    type: RGB565
+    use_transparency: true
+  - file: ${listening_illustration_file}
+    id: casita_listening
+    resize: 320x240
+    type: RGB565
+    use_transparency: true
+  - file: ${thinking_illustration_file}
+    id: casita_thinking
+    resize: 320x240
+    type: RGB565
+    use_transparency: true
+  - file: ${replying_illustration_file}
+    id: casita_replying
+    resize: 320x240
+    type: RGB565
+    use_transparency: true
+  - file: ${timer_finished_illustration_file}
+    id: casita_timer_finished
+    resize: 320x240
+    type: RGB565
+    use_transparency: true
+  - file: ${loading_illustration_file}
+    id: casita_initializing
+    resize: 320x240
+    type: RGB565
+    use_transparency: true
+  - file: https://github.com/esphome/wake-word-voice-assistants/raw/main/error_box_illustrations/error-no-wifi.png
+    id: error_no_wifi
+    resize: 320x240
+    type: RGB565
+    use_transparency: true
+  - file: https://github.com/esphome/wake-word-voice-assistants/raw/main/error_box_illustrations/error-no-ha.png
+    id: error_no_ha
+    resize: 320x240
+    type: RGB565
+    use_transparency: true
+
+text_sensor:
+  - id: text_request
+    platform: template
+    on_value:
+      lambda: |-
+        if(id(text_request).state.length()>32) {
+          std::string name = id(text_request).state.c_str();
+          std::string truncated = esphome::str_truncate(name.c_str(),31);
+          id(text_request).state = (truncated+"...").c_str();
+        }
+
+  - id: text_response
+    platform: template
+    on_value:
+      lambda: |-
+        if(id(text_response).state.length()>32) {
+          std::string name = id(text_response).state.c_str();
+          std::string truncated = esphome::str_truncate(name.c_str(),31);
+          id(text_response).state = (truncated+"...").c_str();
+        }
+
+color:
+  - id: idle_color
+    hex: ${idle_illustration_background_color}
+  - id: listening_color
+    hex: ${listening_illustration_background_color}
+  - id: thinking_color
+    hex: ${thinking_illustration_background_color}
+  - id: replying_color
+    hex: ${replying_illustration_background_color}
+  - id: loading_color
+    hex: ${loading_illustration_background_color}
+  - id: error_color
+    hex: ${error_illustration_background_color}
+  - id: active_timer_color
+    hex: "26ed3a"
+  - id: paused_timer_color
+    hex: "3b89e3"
+  # Tango Palette
+  - id: scarlet_red
+    hex: EF2929
+  - id: sky_blue
+    hex: 729FCF
+
+file:
+  - id: timer_finished_wave_file
+    file: https://github.com/esphome/wake-word-voice-assistants/raw/main/sounds/timer_finished.wav
+  - id: awake_wave_file
+    file: sounds/awake.wav
+  - id: done_wave_file
+    file: sounds/done.wav
+  - id: error_sound
+    file: sounds/error.wav
+
+spi:
+  - id: spi_bus
+    clk_pin: 7
+    mosi_pin: 6
+
+lvgl:
+  displays:
+    - s3_box_lcd
+  touchscreens:
+    - gt911_touchscreen
+  theme:
+    label:
+      text_font: montserrat_14
+    button:
+      bg_color: 0x2F8CD8
+      bg_grad_color: 0x005782
+      bg_grad_dir: VER
+      bg_opa: COVER
+      border_color: 0x0077b3
+      border_width: 1
+      text_color: 0xFFFFFF
+      pressed: # set some button colors to be different in pressed state
+        bg_color: 0x006699
+        bg_grad_color: 0x00334d
+      checked: # set some button colors to be different in checked state
+        bg_color: 0x1d5f96
+        bg_grad_color: 0x03324A
+        text_color: 0xfff300
+    buttonmatrix:
+      bg_opa: TRANSP
+      border_color: 0x0077b3
+      border_width: 0
+      text_color: 0xFFFFFF
+      pad_all: 0
+      items: # set all your buttonmatrix buttons to use your custom defined styles and font
+        bg_color: 0x2F8CD8
+        bg_grad_color: 0x005782
+        bg_grad_dir: VER
+        bg_opa: COVER
+        border_color: 0x0077b3
+        border_width: 1
+        text_color: 0xFFFFFF
+        text_font: montserrat_14
+        pressed:
+          bg_color: 0x006699
+          bg_grad_color: 0x00334d
+        checked:
+          bg_color: 0x1d5f96
+          bg_grad_color: 0x03324A
+          text_color: 0x005580
+    switch:
+      bg_color: 0xC0C0C0
+      bg_grad_color: 0xb0b0b0
+      bg_grad_dir: VER
+      bg_opa: COVER
+      checked:
+        bg_color: 0x1d5f96
+        bg_grad_color: 0x03324A
+        bg_grad_dir: VER
+        bg_opa: COVER
+      knob:
+        bg_color: 0xFFFFFF
+        bg_grad_color: 0xC0C0C0
+        bg_grad_dir: VER
+        bg_opa: COVER
+    slider:
+      border_width: 1
+      border_opa: 15%
+      bg_color: 0xcccaca
+      bg_opa: 15%
+      indicator:
+        bg_color: 0x1d5f96
+        bg_grad_color: 0x03324A
+        bg_grad_dir: VER
+        bg_opa: COVER
+      knob:
+        bg_color: 0x2F8CD8
+        bg_grad_color: 0x005782
+        bg_grad_dir: VER
+        bg_opa: COVER
+        border_color: 0x0077b3
+        border_width: 1
+        text_color: 0xFFFFFF
+  style_definitions:
+    - id: header_footer
+      bg_color: 0x2F8CD8
+      bg_grad_color: 0x005782
+      bg_grad_dir: VER
+      bg_opa: COVER
+      border_opa: TRANSP
+      radius: 0
+      pad_all: 0
+      pad_row: 0
+      pad_column: 0
+      border_color: 0x0077b3
+      text_color: 0xFFFFFF
+      width: 100%
+      height: 30
+  top_layer:
+    widgets:
+      - buttonmatrix:
+          align: bottom_mid
+          styles: header_footer
+          pad_all: 0
+          outline_width: 0
+          id: top_layer
+          items:
+            styles: header_footer
+          rows:
+            - buttons:
+              - id: page_prev
+                text: "\uF053"
+                on_press:
+                  then:
+                    lvgl.page.previous:
+              - id: page_home
+                text: "\uF015"
+                on_press:
+                  then:
+                    lvgl.page.show: main_page
+              - id: page_next
+                text: "\uF054"
+                on_press:
+                  then:
+                    lvgl.page.next:
+      - label:
+          text: "\uF1EB"
+          id: lbl_hastatus
+          hidden: true
+          align: top_right
+          x: -2
+          y: 7
+          text_align: right
+          text_color: 0xFFFFFF
+      - obj:
+          id: boot_screen
+          x: 0
+          y: 0
+          width: 100%
+          height: 100%
+          bg_color: 0xffffff
+          bg_opa: COVER
+          radius: 0
+          pad_all: 0
+          border_width: 0
+          widgets:
+            - image:
+                align: CENTER
+                src: casita_initializing
+                y: 0
+            - spinner:
+                align: CENTER
+                y: 0
+                height: 120
+                width: 120
+                spin_time: 1s
+                arc_length: 60deg
+                arc_width: 16
+                indicator:
+                  arc_color: 0x18bcf2
+                  arc_width: 16
+          on_press:
+            - lvgl.widget.hide: boot_screen
+  on_idle:
+    timeout: !lambda "return (id(display_timeout).state * 1000);"
+    then:
+      - logger.log: "LVGL is idle"
+      - light.turn_off: display_backlight
+      - lvgl.pause:
+  pages:
+    - id: main_page
+      widgets:
+        - obj:
+            align: TOP_MID
+            styles: header_footer
+            widgets:
+              - label:
+                  text: ${friendly_name}
+                  align: CENTER
+                  text_align: CENTER
+                  text_color: 0xFFFFFF
+        - meter:
+            align: LEFT_MID
+            height: 160
+            width: 160
+            scales:
+              - range_from: -100 # scale for the needle value
+                range_to: 400
+                angle_range: 240
+                rotation: 150
+                indicators:
+                  - line:
+                      id: temperature_needle
+                      width: 2
+                      color: 0xFF0000
+                      r_mod: -4
+                  - tick_style:
+                      start_value: -10
+                      end_value: 40
+                      color_start: 0x0000bd
+                      color_end: 0xbd0000
+                      width: 1
+              - range_from: -10 # scale for the value labels
+                range_to: 40
+                angle_range: 240
+                rotation: 150
+                ticks:
+                  width: 1
+                  count: 50
+                  length: 10
+                  color: 0x000000
+                  major:
+                    stride: 5
+                    width: 2
+                    length: 10
+                    color: 0x404040
+                    label_gap: 10
+            widgets:
+              - label:
+                  id: temperature_text
+                  text: "-.- °C"
+                  align: CENTER
+                  y: 55
+        - meter:
+            align: RIGHT_MID
+            height: 160
+            width: 160
+            scales:
+              - range_from: 0 # scale for the needle value
+                range_to: 100
+                angle_range: 240
+                rotation: 150
+                indicators:
+                  - line:
+                      id: humidity_needle
+                      width: 2
+                      color: 0xFF0000
+                      r_mod: -4
+                  - tick_style:
+                      start_value: 0
+                      end_value: 100
+                      color_start: 0x0000bd
+                      color_end: 0xbd0000
+                      width: 1
+              - range_from: 0 # scale for the value labels
+                range_to: 100
+                angle_range: 240
+                rotation: 150
+                ticks:
+                  width: 1
+                  count: 50
+                  length: 10
+                  color: 0x000000
+                  major:
+                    stride: 5
+                    width: 2
+                    length: 10
+                    color: 0x404040
+                    label_gap: 10
+            widgets:
+              - label:
+                  id: humidity_text
+                  text: "-.- %"
+                  align: CENTER
+                  y: 55
+    - id: va_page
+      widgets:
+        - image:
+            align: CENTER
+            src: casita_idle
+            y: -5
+        - obj:
+            align: TOP_MID
+            styles: header_footer
+            widgets:
+              - label:
+                  text: ${micro_wake_word_model}
+                  align: CENTER
+                  text_align: CENTER
+                  text_color: 0xFFFFFF
+
+display:
+  - platform: ili9xxx
+    id: s3_box_lcd
+    model: S3BOX
+    invert_colors: false
+    data_rate: 40MHz
+    cs_pin: 5
+    dc_pin: 4
+    reset_pin:
+      number: 48
+      inverted: true
+    update_interval: never
+    auto_clear_enabled: false
+
+touchscreen:
+  platform: gt911
+  i2c_id: bus_0
+  id: gt911_touchscreen
+  interrupt_pin: GPIO3
+  on_release:
+    - script.execute: lvgl_resume
+
+i2c:
+  - id: bus_0
+    sda: GPIO8
+    scl: GPIO18
+    scan: false
+  - id: bus_a
+    sda: GPIO41
+    scl: GPIO40
+    scan: false
+
+sensor:
+  - platform: aht10
+    variant: AHT20  # Also for AHT30
+    i2c_id: bus_a
+    id: aht_20
+    #address: 0x38  # Needed?
+    temperature:
+      name: "Temperature"
+    humidity:
+      name: "Humidity"
+    update_interval: 60s
+  - platform: homeassistant
+    id: ha_temperature
+    entity_id: ${temperature_sensor}
+    internal: true
+    device_class: temperature
+    state_class: measurement
+    unit_of_measurement: °C
+    on_value:
+      - lvgl.indicator.update:
+          id: temperature_needle
+          value: !lambda return x * 10;
+      - lvgl.label.update:
+          id: temperature_text
+          text:
+            format: "%.1f °C"
+            args: ['x']
+  - platform: homeassistant
+    id: ha_humidity
+    entity_id: ${humidity_sensor}
+    internal: true
+    device_class: humidity
+    state_class: measurement
+    unit_of_measurement: '%'
+    on_value:
+      - lvgl.indicator.update:
+          id: humidity_needle
+          value: !lambda return x;
+      - lvgl.label.update:
+          id: humidity_text
+          text:
+            format: "%2.0f %%"
+            args: ['x']
+
+web_server:
+  port: 80
+  auth:
+    username: admin
+    password: '1234'
