@@ -467,7 +467,7 @@ script:
             }
             id(s3_box_lcd).printf(120, 57, id(font_timer), Color::BLACK, "%s", display_string.c_str());
 
-            if (id(global_first_active_timer).name.c_str()) {
+            if (id(global_first_active_timer).name.length()) {
               id(s3_box_lcd).filled_rectangle(20 , 20 , 280 , 30 , Color::WHITE );
               id(s3_box_lcd).rectangle(20 , 20 , 280 , 30 , Color::BLACK );
               id(s3_box_lcd).printf(30, 25, id(font_request), Color::BLACK, "%s", id(global_first_active_timer).name.c_str());
@@ -827,7 +827,7 @@ display:
         lambda: |-
           it.fill(id(idle_color));
           it.image((it.get_width() / 2), (it.get_height() / 2), id(casita_timer_finished), ImageAlign::CENTER);
-          if (id(global_first_active_timer).name.c_str()) {
+          if (id(global_first_active_timer).name.length()) {
             it.filled_rectangle(20 , 190 , 280 , 30 , Color::WHITE );
             it.rectangle(20 , 190 , 280 , 30 , Color::BLACK );
             it.printf(30, 195, id(font_response), Color::BLACK, "%s", id(global_first_active_timer).name.c_str());
