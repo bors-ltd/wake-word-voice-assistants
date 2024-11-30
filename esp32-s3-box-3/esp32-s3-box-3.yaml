@@ -187,8 +187,8 @@ micro_wake_word:
   models:
     - ${micro_wake_word_model}
   on_wake_word_detected:
-    - light.turn_on: led
     - lambda: id(box_speaker).play(id(awake_wave_file), sizeof(id(awake_wave_file)));
+    - light.turn_on: led
     - wait_until:
         not:
           speaker.is_playing:
@@ -227,8 +227,8 @@ voice_assistant:
         state: !lambda return x;
   on_tts_stream_start:
     - lambda: id(voice_assistant_phase) = ${voice_assist_replying_phase_id};
-    - script.execute: draw_display
     - lambda: id(box_speaker).play(id(done_wave_file), sizeof(id(done_wave_file)));
+    - script.execute: draw_display
     - wait_until:
         not:
           speaker.is_playing:
@@ -265,8 +265,8 @@ voice_assistant:
           lambda: return !id(init_in_progress);
         then:
           - lambda: id(voice_assistant_phase) = ${voice_assist_error_phase_id};
-          - script.execute: draw_display
           - lambda: id(box_speaker).play(id(error_sound), sizeof(id(error_sound)));
+          - script.execute: draw_display
           - wait_until:
               not:
                 speaker.is_playing:
