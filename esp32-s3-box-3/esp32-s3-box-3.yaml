@@ -825,23 +825,34 @@ display:
           if (id(global_first_active_timer).name.length()) {
             name = id(global_first_active_timer).name;
           } else {
+            name = "Minuteur de ";
+
             // Give a name based on the original intent to nameless timers
             // Try and recreate what the VA would say, like "2 minutes left on the 5 minutes timer"
-            // It would obviously be practical if the Timer class already offered this feature
+            // It would obviously be convenient if the Timer class already offered this feature
             // Not an exact duplicate of displaying the timer left, but at least 50% identical, to factor out
             int total_hours = floor(id(global_first_active_timer).total_seconds / 3600);
             int total_minutes = floor((id(global_first_active_timer).total_seconds - total_hours * 3600) / 60);
             int total_seconds = id(global_first_active_timer).total_seconds - total_hours * 3600 - total_minutes * 60 ;
 
-            name = "Minuteur de ";
-            if (total_hours) {
-              name += std::to_string(total_hours) + " h ";
-            }
-            if (total_minutes) {
-              name += std::to_string(total_minutes) + " m ";
-            }
-            if (total_seconds) {
-              name += std::to_string(total_seconds) + " s";
+            // Attempt more legible format
+            if (total_hours && !total_minutes && !total_seconds) {
+              name += std::to_string(total_hours) + " heure" + (total_hours >= 2 ? "s" : "");
+            } else if (total_minutes && !total_seconds) {
+              name += std::to_string(total_minutes) + " minute" + (total_minutes >= 2 ? "s": "");
+            } else if (total_seconds) {
+              name += std::to_string(total_seconds) + " seconde" + (total_seconds >= 2 ? "s": "");
+            } else {
+              // Fallback to condensed format
+              if (total_hours) {
+                name += std::to_string(total_hours) + " h ";
+              }
+              if (total_minutes) {
+                name += std::to_string(total_minutes) + " m ";
+              }
+              if (total_seconds) {
+                name += std::to_string(total_seconds) + " s";
+              }
             }
           }
 
