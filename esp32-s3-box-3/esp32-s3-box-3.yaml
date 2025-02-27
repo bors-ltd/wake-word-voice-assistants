@@ -51,6 +51,8 @@ esphome:
           then:
             - lambda: id(init_in_progress) = false;
             - script.execute: draw_display
+            - delay: 5s
+            - light.turn_off: led
 
 esp32:
   board: esp32s3box
@@ -107,7 +109,13 @@ binary_sensor:
           - ON for at least 50ms
           - OFF for at least 50ms
         then:
-          - switch.turn_off: timer_ringing
+          if:
+            condition:
+              switch.is_on: timer_ringing
+            then:
+              switch.turn_off: timer_ringing
+            else:
+              light.toggle: led
       - timing:
           - ON for at least 10s
         then:
@@ -129,8 +137,12 @@ light:
     default_transition_length: 250ms
 
 i2c:
-  scl: GPIO18
-  sda: GPIO8
+  - id: bus_0
+    sda: GPIO8
+    scl: GPIO18
+  - id: bus_a
+    sda: GPIO41
+    scl: GPIO40
 
 i2s_audio:
   - id: i2s_audio_bus
@@ -143,12 +155,14 @@ audio_adc:
     id: es7210_adc
     bits_per_sample: 16bit
     sample_rate: 16000
+    i2c_id: bus_0
 
 audio_dac:
   - platform: es8311
     id: es8311_dac
     bits_per_sample: 16bit
     sample_rate: 48000
+    i2c_id: bus_0
 
 microphone:
   - platform: i2s_audio
@@ -183,6 +197,12 @@ media_player:
     files:
       - id: timer_finished_sound
         file: https://github.com/esphome/home-assistant-voice-pe/raw/dev/sounds/timer_finished.flac
+      - id: awake_sound
+        file: https://github.com/esphome/home-assistant-voice-pe/raw/dev/sounds/wake_word_triggered.flac
+      - id: done_sound
+        file: https://github.com/esphome/home-assistant-voice-pe/raw/dev/sounds/center_button_press.flac
+      - id: error_sound
+        file: sounds/error.flac
     on_announcement:
       # Stop the wake word (mWW or VA) if the mic is capturing
       - if:
@@ -224,6 +244,7 @@ micro_wake_word:
     - hey_mycroft
     - hey_jarvis
   on_wake_word_detected:
+    # - media_player.speaker.play_on_device_media_file: awake_sound
     - voice_assistant.start:
         wake_word: !lambda return wake_word;
 
@@ -253,6 +274,7 @@ voice_assistant:
         state: !lambda return x;
     - script.execute: draw_display
   on_tts_start:
+    # - media_player.speaker.play_on_device_media_file: done_sound
     - text_sensor.template.publish:
         id: text_response
         state: !lambda return x;
@@ -292,6 +314,7 @@ voice_assistant:
         condition:
           lambda: return !id(init_in_progress);
         then:
+          # - media_player.speaker.play_on_device_media_file: error_sound
           - lambda: id(voice_assistant_phase) = ${voice_assist_error_phase_id};
           - script.execute: draw_display
           - delay: 1s
@@ -342,6 +365,11 @@ script:
                       condition:
                         api.connected:
                       then:
+                        - if:
+                            condition:
+                              lambda: return id(voice_assistant_phase) != ${voice_assist_idle_phase_id};
+                            then:
+                              - light.turn_on: led
                         - lambda: |
                             switch(id(voice_assistant_phase)) {
                               case ${voice_assist_listening_phase_id}:
@@ -376,6 +404,14 @@ script:
                                 id(s3_box_lcd).show_page(idle_page);
                                 id(s3_box_lcd).update();
                             }
+                        - if:
+                            condition:
+                              lambda: |
+                                id(check_if_timers_active).execute();
+                                return !id(global_is_timer_active) && id(voice_assistant_phase) == ${voice_assist_idle_phase_id};
+                            then:
+                              - delay: 1s
+                              - light.turn_off: led
                       else:
                         - display.page.show: no_ha_page
                         - component.update: s3_box_lcd
@@ -456,8 +492,8 @@ script:
       - lambda: |
           id(check_if_timers_active).execute();
           if (id(global_is_timer_active)){
-            id(s3_box_lcd).filled_rectangle(80 , 40 , 160 , 50 , Color::WHITE );
-            id(s3_box_lcd).rectangle(80 , 40 , 160 , 50 , Color::BLACK );
+            id(s3_box_lcd).filled_rectangle(80 , 50 , 160 , 50 , Color::WHITE );
+            id(s3_box_lcd).rectangle(80 , 50 , 160 , 50 , Color::BLACK );
 
             id(fetch_first_active_timer).execute();
             int hours_left = floor(id(global_first_active_timer).seconds_left / 3600);
@@ -473,7 +509,14 @@ script:
             } else {
               display_string = display_minute + ":" + display_seconds;
             }
-            id(s3_box_lcd).printf(120, 47, id(font_timer), Color::BLACK, "%s", display_string.c_str());
+            id(s3_box_lcd).printf(120, 57, id(font_timer), Color::BLACK, "%s", display_string.c_str());
+
+            if (id(global_first_active_timer).name.length()) {
+              id(s3_box_lcd).filled_rectangle(20 , 20 , 280 , 30 , Color::WHITE );
+              id(s3_box_lcd).rectangle(20 , 20 , 280 , 30 , Color::BLACK );
+              id(s3_box_lcd).printf(30, 25, id(font_request), Color::BLACK, "%s", id(global_first_active_timer).name.c_str());
+            }
+
           }
   # Starts either mWW or the streaming wake word, depending on the configured location
   - id: start_wake_word
@@ -806,6 +849,48 @@ display:
         lambda: |-
           it.fill(id(idle_color));
           it.image((it.get_width() / 2), (it.get_height() / 2), id(casita_timer_finished), ImageAlign::CENTER);
+
+          // Display which timer is ringing
+          std::string name = "";
+          // Can't refresh as the timer currently ringing is already out of the timer list
+          // Hopefully that's the good one still referenced (as refreshed by "draw_timer_timeline")
+          if (id(global_first_active_timer).name.length()) {
+            name = id(global_first_active_timer).name;
+          } else {
+            name = "Minuteur de ";
+            // Give a name based on the original intent to nameless timers
+            // Try and recreate what the VA would say, like "2 minutes left on the 5 minutes timer"
+            // It would obviously be convenient if the Timer class already offered this feature
+            // Not an exact duplicate of displaying the timer left, but at least 50% identical, to factor out
+            int total_hours = floor(id(global_first_active_timer).total_seconds / 3600);
+            int total_minutes = floor((id(global_first_active_timer).total_seconds - total_hours * 3600) / 60);
+            int total_seconds = id(global_first_active_timer).total_seconds - total_hours * 3600 - total_minutes * 60 ;
+
+            // Attempt more legible format
+            if (total_hours && !total_minutes && !total_seconds) {
+              name += std::to_string(total_hours) + " heure" + (total_hours >= 2 ? "s" : "");
+            } else if (total_minutes && !total_seconds) {
+              name += std::to_string(total_minutes) + " minute" + (total_minutes >= 2 ? "s": "");
+            } else if (total_seconds) {
+              name += std::to_string(total_seconds) + " seconde" + (total_seconds >= 2 ? "s": "");
+            } else {
+              // Fallback to condensed format
+              if (total_hours) {
+                name += std::to_string(total_hours) + " h ";
+              }
+              if (total_minutes) {
+                name += std::to_string(total_minutes) + " m ";
+              }
+              if (total_seconds) {
+                name += std::to_string(total_seconds) + " s";
+              }
+            }
+          }
+
+          it.filled_rectangle(20 , 190 , 280 , 30 , Color::WHITE);
+          it.rectangle(20 , 190 , 280 , 30 , Color::BLACK);
+          const auto timers = id(va).get_timers();
+          it.printf(30, 195, id(font_response), Color::BLACK, "%s", name.c_str());
       - id: error_page
         lambda: |-
           it.fill(id(error_color));
@@ -825,3 +910,29 @@ display:
           it.fill(Color::BLACK);
           id(draw_timer_timeline).execute();
           id(draw_active_timer_widget).execute();
+
+sensor:
+  - platform: aht10
+    variant: AHT20  # Also for AHT30
+    i2c_id: bus_a
+    id: aht_20
+    # address: 0x38  # Needed?
+    temperature:
+      name: "Temperature"
+    humidity:
+      name: "Humidity"
+    update_interval: 60s
+  - platform: homeassistant
+    id: ha_temperature
+    entity_id: ${temperature_sensor}
+    internal: true
+    device_class: temperature
+    state_class: measurement
+    unit_of_measurement: °C
+  - platform: homeassistant
+    id: ha_humidity
+    entity_id: ${humidity_sensor}
+    internal: true
+    device_class: humidity
+    state_class: measurement
+    unit_of_measurement: '%'
